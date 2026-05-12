@@ -22,9 +22,9 @@ class Server extends AbstractEndpoint {
     }
 
     #[Endpoint('get', '/server/{id}', 'Get server infos')]
-    public function getServer(): array {
+    public function getServer(string $id): array {
         $userId   = $this->requireAuth();
-        $serverId = (int) ($_GET['id'] ?? 0);
+        $serverId = (int) $id;
 
         $model  = new ServerModel();
         $server = $model->findById($serverId);
@@ -164,9 +164,9 @@ class Server extends AbstractEndpoint {
     }
 
     #[Endpoint('get', '/server/{id}/members', 'Get server members')]
-    public function getServerMembers(): array {
+    public function getServerMembers(string $id): array {
         $userId   = $this->requireAuth();
-        $serverId = (int) ($_GET['id'] ?? 0);
+        $serverId = (int) $id;
 
         $serverModel = new ServerModel();
         $server      = $serverModel->findById($serverId);
@@ -180,7 +180,7 @@ class Server extends AbstractEndpoint {
             jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
         }
 
-        return $memberModel->countMembers($serverId) ? [] : [];
+        return $memberModel->getMembers($serverId);
     }
 
     #[Endpoint('post', '/server/join', 'Join server by invite code')]

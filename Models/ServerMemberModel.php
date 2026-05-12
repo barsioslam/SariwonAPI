@@ -41,4 +41,16 @@ class ServerMemberModel extends Model {
         return (int) ($row['total'] ?? 0);
     }
 
+    public function getMembers(int $serverId): array {
+        $this->query(
+            'SELECT sm.role, sm.joined_at, u.id AS user_id, u.username
+             FROM `server_member` sm
+             JOIN `user` u ON u.id = sm.user_id
+             WHERE sm.server_id = :server_id
+             ORDER BY FIELD(sm.role, "gm", "player"), sm.joined_at ASC',
+            ['server_id' => $serverId]
+        );
+        return $this->fetchAll();
+    }
+
 }

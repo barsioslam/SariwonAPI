@@ -126,8 +126,8 @@ if ($config->get('core', 'debug/show_ep') == true && $url[0] == "__debug__") {
     die();
 
 }
-/*
-try {*/
+
+try {
     $requestMethod = strtolower($_SERVER['REQUEST_METHOD'] ?? 'get');
     $requestUrl = trim($_GET['url'] ?? '', '/');
 
@@ -187,7 +187,7 @@ try {*/
     }
 
     jsonResponse(false, [], ErrorCodes::ENDPOINT_NOT_FOUND, 404);
-/*
+
 } catch (Throwable $e) {
 
     jsonResponse(false, [
@@ -199,4 +199,4 @@ try {*/
 
     // jsonResponse(false, [], ErrorCodes::INTERNAL_SERVER_ERROR, 500);
     
-}*/
+}

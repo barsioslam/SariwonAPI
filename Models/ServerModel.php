@@ -21,10 +21,10 @@ class ServerModel extends Model {
 
     public function findByUser(int $userId): array {
         $this->query(
-            'SELECT s.*, sm.role, sm.joined_at, ts.title AS theme_title
+            'SELECT s.*, sm.role, sm.joined_at,
+                    (SELECT COUNT(*) FROM `server_member` WHERE server_id = s.id) AS member_count
              FROM `server_member` sm
              JOIN `server` s ON s.id = sm.server_id
-             LEFT JOIN `tag_style` ts ON ts.id = s.server_theme_id
              WHERE sm.user_id = :user_id
              ORDER BY sm.joined_at DESC',
             ['user_id' => $userId]
