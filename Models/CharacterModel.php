@@ -30,12 +30,15 @@ class CharacterModel extends Model {
     public function findByUser(int $userId): array {
         $this->query(
             'SELECT c.`id`, c.`name`, c.`level`, c.`xp`, c.`server_id`,
-                    s.name AS species_name, cl.name AS class_name
+                    srv.`name` AS server_name,
+                    s.name  AS species_name,
+                    cl.name AS class_name
              FROM `character` c
-             LEFT JOIN `species`         s  ON s.id  = c.species_id
-             LEFT JOIN `character_class` cl ON cl.id = c.class_id
+             LEFT JOIN `server`          srv ON srv.id = c.server_id
+             LEFT JOIN `species`         s   ON s.id  = c.species_id
+             LEFT JOIN `character_class` cl  ON cl.id = c.class_id
              WHERE c.`user_id` = :uid
-             ORDER BY c.`created_at` DESC',
+             ORDER BY c.`server_id`, c.`created_at` DESC',
             ['uid' => $userId]
         );
         return $this->fetchAll();

@@ -109,6 +109,13 @@ class ServerModel extends Model {
         return $this->query('DELETE FROM `server` WHERE `id` = :id', ['id' => $id]);
     }
 
+    public function setActive(int $id, bool $active): bool {
+        return $this->query(
+            'UPDATE `server` SET `is_active` = :active WHERE `id` = :id',
+            ['active' => (int) $active, 'id' => $id]
+        );
+    }
+
     public function isOwner(int $serverId, int $userId): bool {
         $this->query(
             'SELECT id FROM `server` WHERE `id` = :id AND `created_by` = :user_id LIMIT 1',

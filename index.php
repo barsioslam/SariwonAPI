@@ -138,6 +138,7 @@ try {
         SariwonAPI\Endpoints\Map::class,
         SariwonAPI\Endpoints\Me::class,
         SariwonAPI\Endpoints\Server::class,
+        SariwonAPI\Endpoints\ServerLookup::class,
         SariwonAPI\Endpoints\User::class,
     ];
 

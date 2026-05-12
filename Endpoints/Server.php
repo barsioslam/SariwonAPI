@@ -4,6 +4,11 @@ namespace SariwonAPI\Endpoints;
 
 use SariwonAPI\Models\ServerModel;
 use SariwonAPI\Models\ServerMemberModel;
+use SariwonAPI\Models\CharacterModel;
+use SariwonAPI\Models\SpeciesModel;
+use SariwonAPI\Models\CharacterClassModel;
+use SariwonAPI\Models\CharacterJobModel;
+use SariwonAPI\Models\AlignmentModel;
 use SariwonAPI\Config\ErrorCodes;
 
 class Server extends AbstractEndpoint {
@@ -181,6 +186,75 @@ class Server extends AbstractEndpoint {
         }
 
         return $memberModel->getMembers($serverId);
+    }
+
+    #[Endpoint('post', '/server/{id}/start', 'Start RP session')]
+    public function startServer(string $id): array {
+        $userId   = $this->requireAuth();
+        $serverId = (int) $id;
+
+        $model  = new ServerModel();
+        $server = $model->findById($serverId);
+
+        if (!$server) {
+            jsonResponse(false, [], ErrorCodes::SERVER_NOT_FOUND, 404);
+        }
+        if (!$model->isOwner($serverId, $userId)) {
+            jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
+        }
+
+        $model->setActive($serverId, true);
+        return ['is_active' => true];
+    }
+
+    #[Endpoint('post', '/server/{id}/stop', 'Stop RP session')]
+    public function stopServer(string $id): array {
+        $userId   = $this->requireAuth();
+        $serverId = (int) $id;
+
+        $model  = new ServerModel();
+        $server = $model->findById($serverId);
+
+        if (!$server) {
+            jsonResponse(false, [], ErrorCodes::SERVER_NOT_FOUND, 404);
+        }
+        if (!$model->isOwner($serverId, $userId)) {
+            jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
+        }
+
+        $model->setActive($serverId, false);
+        return ['is_active' => false];
+    }
+
+    #[Endpoint('get', '/server/{id}/characters', 'Get server characters')]
+    public function getServerCharacters(string $id): array {
+        $userId   = $this->requireAuth();
+        $serverId = (int) $id;
+
+        $memberModel = new ServerMemberModel();
+        if (!$memberModel->isMember($serverId, $userId)) {
+            jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
+        }
+
+        return (new CharacterModel())->findByServer($serverId);
+    }
+
+    #[Endpoint('get', '/server/{id}/lookups', 'Get server lookups')]
+    public function getServerLookups(string $id): array {
+        $userId   = $this->requireAuth();
+        $serverId = (int) $id;
+
+        $memberModel = new ServerMemberModel();
+        if (!$memberModel->isMember($serverId, $userId)) {
+            jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
+        }
+
+        return [
+            'species'    => (new SpeciesModel())->findForServer($serverId),
+            'classes'    => (new CharacterClassModel())->findForServer($serverId),
+            'jobs'       => (new CharacterJobModel())->findForServer($serverId),
+            'alignments' => (new AlignmentModel())->findForServer($serverId),
+        ];
     }
 
     #[Endpoint('post', '/server/join', 'Join server by invite code')]
