@@ -5,8 +5,20 @@ namespace SariwonAPI\Endpoints;
 use \ReflectionClass;
 use \ReflectionMethod;
 use SariwonAPI\Endpoints\Endpoint;
+use SariwonAPI\Config\ErrorCodes;
 
 abstract class AbstractEndpoint {
+
+    protected function body(): array {
+        return (array) (json_decode(file_get_contents('php://input'), true) ?? []);
+    }
+
+    protected function requireAuth(): int {
+        if (empty($_SESSION['user_id'])) {
+            jsonResponse(false, [], ErrorCodes::AUTH_NOT_AUTHENTICATED, 401);
+        }
+        return (int) $_SESSION['user_id'];
+    }
 
     public static function getEndpoints(): array {
 

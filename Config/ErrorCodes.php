@@ -1,5 +1,7 @@
 <?php
 
+namespace SariwonAPI\Config;
+
 class ErrorCodes {
 
     // GENERAL CODES
@@ -17,7 +19,17 @@ class ErrorCodes {
     const MISSING_PARAMETERS = 1004;
     const INVALID_PARAMETERS = 1005;
 
-    public static function getMessage($code) {
+    // AUTH CODES
+    const AUTH_INVALID_CREDENTIALS = 2001;
+    const AUTH_EMAIL_TAKEN = 2002;
+    const AUTH_USERNAME_TAKEN = 2003;
+    const AUTH_NOT_AUTHENTICATED = 2004;
+
+    // CHARACTER CODES
+    const CHAR_NOT_FOUND = 3001;
+    const CHAR_FORBIDDEN = 3002;
+
+    public static function getMessage(int $code): string {
         switch ($code) {
             case self::INVALID_REQUEST:
                 return 'Invalid request.';
@@ -39,6 +51,18 @@ class ErrorCodes {
                 return 'Missing parameters.';
             case self::INVALID_PARAMETERS:
                 return 'Invalid parameters.';
+            case self::AUTH_INVALID_CREDENTIALS:
+                return 'Invalid email or password.';
+            case self::AUTH_EMAIL_TAKEN:
+                return 'This email is already in use.';
+            case self::AUTH_USERNAME_TAKEN:
+                return 'This username is already taken.';
+            case self::AUTH_NOT_AUTHENTICATED:
+                return 'Authentication required.';
+            case self::CHAR_NOT_FOUND:
+                return 'Character not found.';
+            case self::CHAR_FORBIDDEN:
+                return 'You do not own this character.';
             default:
                 return 'Unknown error.';
         }

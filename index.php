@@ -1,5 +1,7 @@
 <?php
 
+session_start();
+
 define('BASE_DIR', __DIR__ .'/');
 define('ENDPOINTS_DIR', BASE_DIR . '/Endpoints');
 define('MODELS_DIR', BASE_DIR . '/Models');
@@ -12,6 +14,7 @@ require_once __DIR__ . '/vendor/AutoLoad.php';
 
 
 use SariwonAPI\Config\Configuration;
+use SariwonAPI\Config\ErrorCodes;
 
 $config = Configuration::getInstance();
 
@@ -93,6 +96,7 @@ try {
 
     // Liste des classes endpoint à exposer
     $endpointClasses = [
+        SariwonAPI\Endpoints\Auth::class,
         SariwonAPI\Endpoints\Character::class,
         SariwonAPI\Endpoints\Map::class,
         SariwonAPI\Endpoints\Me::class,

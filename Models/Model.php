@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 namespace SariwonAPI\Models;
 
@@ -6,22 +6,35 @@ use SariwonAPI\Database\Database;
 
 abstract class Model {
 
-    private string $tableName;
+    protected string $table;
 
-    public function __construct($tableName) {
-        $this->tableName = $tableName;
+    public function __construct(string $table) {
+        $this->table = $table;
     }
 
-    public function get() {
-        $sql = "SELECT * FROM {$this->tableName}";
-        return $this->req($sql);
+    protected function db(): Database {
+        return Database::getInstance();
     }
 
-    public function req($sql, $params = []) {
-        $db = Database::getInstance();
-        $stmt = $db->prepare($sql);
-        $stmt->execute();
-        return $stmt->fetchAll();
+    protected function query(string $sql, array $params = []): bool {
+        return $this->db()->query($sql, $params);
+    }
+
+    protected function fetchAll(): array {
+        return $this->db()->fetchAll() ?: [];
+    }
+
+    protected function fetchOne(): ?array {
+        $results = $this->db()->fetchAll();
+        return $results ? $results[0] : null;
+    }
+
+    protected function lastId(): int {
+        return (int) $this->db()->getId();
+    }
+
+    protected function rowCount(): int {
+        return $this->db()->rowCount();
     }
 
 }
