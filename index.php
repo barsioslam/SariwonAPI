@@ -137,8 +137,10 @@ try {
         SariwonAPI\Endpoints\Character::class,
         SariwonAPI\Endpoints\Map::class,
         SariwonAPI\Endpoints\Me::class,
+        SariwonAPI\Endpoints\Party::class,
         SariwonAPI\Endpoints\Server::class,
         SariwonAPI\Endpoints\ServerLookup::class,
+        SariwonAPI\Endpoints\ServerRuleset::class,
         SariwonAPI\Endpoints\User::class,
     ];
 

@@ -3,7 +3,6 @@
 namespace SariwonAPI\Endpoints;
 
 use SariwonAPI\Models\ServerModel;
-use SariwonAPI\Models\ServerMemberModel;
 use SariwonAPI\Models\SpeciesModel;
 use SariwonAPI\Models\CharacterClassModel;
 use SariwonAPI\Models\CharacterJobModel;
@@ -16,14 +15,6 @@ class ServerLookup extends AbstractEndpoint {
         $userId = $this->requireAuth();
         $model  = new ServerModel();
         if (!$model->isOwner($serverId, $userId)) {
-            jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
-        }
-    }
-
-    private function requireMember(int $serverId): void {
-        $userId = $this->requireAuth();
-        $model  = new ServerMemberModel();
-        if (!$model->isMember($serverId, $userId)) {
             jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
         }
     }

@@ -35,6 +35,10 @@ class ErrorCodes {
     const SERVER_INVITE_INVALID = 4003;
     const SERVER_INVITE_TAKEN   = 4004;
 
+    // PARTY CODES
+    const PARTY_NOT_FOUND  = 5001;
+    const PARTY_FORBIDDEN  = 5002;
+
     public static function getMessage(int $code): string {
         switch ($code) {
             case self::INVALID_REQUEST:
@@ -77,6 +81,10 @@ class ErrorCodes {
                 return 'Invalid invite code.';
             case self::SERVER_INVITE_TAKEN:
                 return 'This invite code is already in use.';
+            case self::PARTY_NOT_FOUND:
+                return 'Party not found.';
+            case self::PARTY_FORBIDDEN:
+                return 'You do not have access to this party.';
             default:
                 return 'Unknown error.';
         }

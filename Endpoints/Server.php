@@ -3,7 +3,7 @@
 namespace SariwonAPI\Endpoints;
 
 use SariwonAPI\Models\ServerModel;
-use SariwonAPI\Models\ServerMemberModel;
+use SariwonAPI\Models\ServerFavoriteModel;
 use SariwonAPI\Models\CharacterModel;
 use SariwonAPI\Models\SpeciesModel;
 use SariwonAPI\Models\CharacterClassModel;
@@ -13,18 +13,25 @@ use SariwonAPI\Config\ErrorCodes;
 
 class Server extends AbstractEndpoint {
 
-    #[Endpoint('get', '/servers', 'Get user servers')]
-    public function getMyServers(): array {
+    // ── Serveurs favoris de l'utilisateur ────────────────────────────────────
+
+    #[Endpoint('get', '/servers', 'Get favorited servers')]
+    public function getFavoritedServers(): array {
         $userId = $this->requireAuth();
-        $model  = new ServerModel();
-        return $model->findByUser($userId);
+        return (new ServerModel())->findFavorited($userId);
     }
 
-    #[Endpoint('get', '/servers/public', 'Get public servers')]
-    public function getPublicServers(): array {
+    // ── Recherche / browse public ─────────────────────────────────────────────
+
+    #[Endpoint('get', '/servers/browse', 'Browse public servers')]
+    public function browseServers(): array {
+        $this->requireAuth();
+        $q = trim((string) ($_GET['q'] ?? ''));
         $model = new ServerModel();
-        return $model->findPublic();
+        return $q !== '' ? $model->search($q) : $model->findPublic();
     }
+
+    // ── Détail d'un serveur (accessible à tous) ───────────────────────────────
 
     #[Endpoint('get', '/server/{id}', 'Get server infos')]
     public function getServer(string $id): array {
@@ -33,19 +40,15 @@ class Server extends AbstractEndpoint {
 
         $model  = new ServerModel();
         $server = $model->findById($serverId);
+        if (!$server) jsonResponse(false, [], ErrorCodes::SERVER_NOT_FOUND, 404);
 
-        if (!$server) {
-            jsonResponse(false, [], ErrorCodes::SERVER_NOT_FOUND, 404);
-        }
+        $server['is_owner']     = $model->isOwner($serverId, $userId);
+        $server['is_favorited'] = (new ServerFavoriteModel())->isFavorited($userId, $serverId);
 
-        $members = new ServerMemberModel();
-        if ($server['visibility'] === 'private' && !$members->isMember($serverId, $userId)) {
-            jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
-        }
-
-        $server['member_count'] = $members->countMembers($serverId);
         return $server;
     }
+
+    // ── Créer un serveur ──────────────────────────────────────────────────────
 
     #[Endpoint('post', '/servers', 'Create server')]
     public function createServer(): array {
@@ -54,200 +57,103 @@ class Server extends AbstractEndpoint {
 
         $name          = trim((string) ($body['name']          ?? ''));
         $description   = trim((string) ($body['description']   ?? ''));
-        $visibility    = trim((string) ($body['visibility']    ?? 'public'));
-        $maxPlayers    = (int)          ($body['maxPlayers']   ?? 8);
-        $inviteCode    = trim((string) ($body['inviteCode']    ?? '')) ?: null;
-        $ageRestricted = (bool)        ($body['ageRestricted'] ?? false);
+        $ageRestricted = (bool)        ($body['age_restricted'] ?? false);
         $genre         = trim((string) ($body['genre']         ?? '')) ?: null;
 
-        // Validation
-        if ($name === '') {
+        if ($name === '' || strlen($name) < 3 || strlen($name) > 60) {
             jsonResponse(false, [], ErrorCodes::MISSING_PARAMETERS, 400);
-        }
-        if (strlen($name) < 3 || strlen($name) > 60) {
-            jsonResponse(false, [], ErrorCodes::INVALID_PARAMETERS, 400);
-        }
-        if (!in_array($visibility, ['public', 'private'], true)) {
-            jsonResponse(false, [], ErrorCodes::INVALID_PARAMETERS, 400);
-        }
-        if ($maxPlayers < 2 || $maxPlayers > 30) {
-            jsonResponse(false, [], ErrorCodes::INVALID_PARAMETERS, 400);
         }
 
         $serverModel = new ServerModel();
-
-        // Vérifier unicité du code d'invitation personnalisé
-        if ($inviteCode !== null) {
-            if (strlen($inviteCode) > 16 || !preg_match('/^[A-Z0-9\-]+$/', $inviteCode)) {
-                jsonResponse(false, [], ErrorCodes::INVALID_PARAMETERS, 400);
-            }
-            if ($serverModel->inviteCodeExists($inviteCode)) {
-                jsonResponse(false, [], ErrorCodes::SERVER_INVITE_TAKEN, 409);
-            }
-        } else {
-            // Générer un code unique automatiquement
-            do {
-                $inviteCode = strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
-            } while ($serverModel->inviteCodeExists($inviteCode));
-        }
-
-        $serverId = $serverModel->create(
-            $userId,
-            $name,
-            $description,
-            $visibility,
-            $maxPlayers,
-            $inviteCode,
-            $ageRestricted,
-            $genre
-        );
+        $serverId    = $serverModel->create($userId, $name, $description, $ageRestricted, $genre);
 
         if (!$serverId) {
-            jsonResponse(false, [
-                'message' => $serverModel->getLastError() ?? 'Insert failed',
-            ], ErrorCodes::INTERNAL_SERVER_ERROR, 500);
+            jsonResponse(false, ['message' => $serverModel->getLastError() ?? 'Insert failed'], ErrorCodes::INTERNAL_SERVER_ERROR, 500);
         }
 
-        // Ajouter le créateur comme membre GM
-        $memberModel = new ServerMemberModel();
-        $memberModel->add($serverId, $userId, 'gm');
+        // Créateur met en favoris automatiquement
+        (new ServerFavoriteModel())->add($userId, $serverId);
 
         return [
-            'id'            => $serverId,
-            'name'          => $name,
-            'description'   => $description,
-            'visibility'    => $visibility,
-            'max_players'   => $maxPlayers,
-            'invite_code'   => $inviteCode,
-            'age_restricted'=> $ageRestricted,
-            'genre'         => $genre,
-            'role'          => 'gm',
-            'member_count'  => 1,
+            'id'             => $serverId,
+            'name'           => $name,
+            'description'    => $description,
+            'age_restricted' => $ageRestricted,
+            'genre'          => $genre,
+            'is_owner'       => true,
+            'is_favorited'   => true,
+            'party_count'    => 0,
         ];
     }
 
-    #[Endpoint('put', '/server/{id}', 'Update server infos', 'restricted')]
-    public function updateServer(): array {
+    // ── Modifier un serveur (GM uniquement) ───────────────────────────────────
+
+    #[Endpoint('put', '/server/{id}', 'Update server infos')]
+    public function updateServer(string $id): array {
         $userId   = $this->requireAuth();
-        $serverId = (int) ($_GET['id'] ?? 0);
+        $serverId = (int) $id;
 
         $model  = new ServerModel();
         $server = $model->findById($serverId);
-
-        if (!$server) {
-            jsonResponse(false, [], ErrorCodes::SERVER_NOT_FOUND, 404);
-        }
-        if (!$model->isOwner($serverId, $userId)) {
-            jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
-        }
+        if (!$server) jsonResponse(false, [], ErrorCodes::SERVER_NOT_FOUND, 404);
+        if (!$model->isOwner($serverId, $userId)) jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
 
         $body    = $this->body();
-        $allowed = ['name', 'description', 'visibility', 'max_players', 'invite_code', 'age_restricted', 'genre'];
+        $allowed = ['name', 'description', 'age_restricted', 'genre'];
         $data    = array_intersect_key($body, array_flip($allowed));
 
         $model->update($serverId, $data);
         return $model->findById($serverId);
     }
 
-    #[Endpoint('delete', '/server/{id}', 'Delete server', 'restricted')]
-    public function deleteServer(): array {
+    // ── Supprimer un serveur ──────────────────────────────────────────────────
+
+    #[Endpoint('delete', '/server/{id}', 'Delete server')]
+    public function deleteServer(string $id): array {
         $userId   = $this->requireAuth();
-        $serverId = (int) ($_GET['id'] ?? 0);
+        $serverId = (int) $id;
 
         $model  = new ServerModel();
         $server = $model->findById($serverId);
-
-        if (!$server) {
-            jsonResponse(false, [], ErrorCodes::SERVER_NOT_FOUND, 404);
-        }
-        if (!$model->isOwner($serverId, $userId)) {
-            jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
-        }
+        if (!$server) jsonResponse(false, [], ErrorCodes::SERVER_NOT_FOUND, 404);
+        if (!$model->isOwner($serverId, $userId)) jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
 
         $model->delete($serverId);
-        return ['message' => 'Server deleted.'];
+        return ['deleted' => true];
     }
 
-    #[Endpoint('get', '/server/{id}/members', 'Get server members')]
-    public function getServerMembers(string $id): array {
+    // ── Favoris : ajouter / retirer ───────────────────────────────────────────
+
+    #[Endpoint('post', '/server/{id}/favorite', 'Add server to favorites')]
+    public function addFavorite(string $id): array {
         $userId   = $this->requireAuth();
         $serverId = (int) $id;
 
-        $serverModel = new ServerModel();
-        $server      = $serverModel->findById($serverId);
+        $server = (new ServerModel())->findById($serverId);
+        if (!$server) jsonResponse(false, [], ErrorCodes::SERVER_NOT_FOUND, 404);
 
-        if (!$server) {
-            jsonResponse(false, [], ErrorCodes::SERVER_NOT_FOUND, 404);
-        }
-
-        $memberModel = new ServerMemberModel();
-        if (!$memberModel->isMember($serverId, $userId)) {
-            jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
-        }
-
-        return $memberModel->getMembers($serverId);
+        (new ServerFavoriteModel())->add($userId, $serverId);
+        return ['favorited' => true];
     }
 
-    #[Endpoint('post', '/server/{id}/start', 'Start RP session')]
-    public function startServer(string $id): array {
+    #[Endpoint('delete', '/server/{id}/favorite', 'Remove server from favorites')]
+    public function removeFavorite(string $id): array {
         $userId   = $this->requireAuth();
         $serverId = (int) $id;
 
-        $model  = new ServerModel();
-        $server = $model->findById($serverId);
-
-        if (!$server) {
-            jsonResponse(false, [], ErrorCodes::SERVER_NOT_FOUND, 404);
-        }
-        if (!$model->isOwner($serverId, $userId)) {
-            jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
-        }
-
-        $model->setActive($serverId, true);
-        return ['is_active' => true];
+        (new ServerFavoriteModel())->remove($userId, $serverId);
+        return ['favorited' => false];
     }
 
-    #[Endpoint('post', '/server/{id}/stop', 'Stop RP session')]
-    public function stopServer(string $id): array {
-        $userId   = $this->requireAuth();
-        $serverId = (int) $id;
+    // ── Lookups live du serveur (brouillon GM) ────────────────────────────────
 
-        $model  = new ServerModel();
-        $server = $model->findById($serverId);
-
-        if (!$server) {
-            jsonResponse(false, [], ErrorCodes::SERVER_NOT_FOUND, 404);
-        }
-        if (!$model->isOwner($serverId, $userId)) {
-            jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
-        }
-
-        $model->setActive($serverId, false);
-        return ['is_active' => false];
-    }
-
-    #[Endpoint('get', '/server/{id}/characters', 'Get server characters')]
-    public function getServerCharacters(string $id): array {
-        $userId   = $this->requireAuth();
-        $serverId = (int) $id;
-
-        $memberModel = new ServerMemberModel();
-        if (!$memberModel->isMember($serverId, $userId)) {
-            jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
-        }
-
-        return (new CharacterModel())->findByServer($serverId);
-    }
-
-    #[Endpoint('get', '/server/{id}/lookups', 'Get server lookups')]
+    #[Endpoint('get', '/server/{id}/lookups', 'Get server live lookups')]
     public function getServerLookups(string $id): array {
-        $userId   = $this->requireAuth();
+        $this->requireAuth();
         $serverId = (int) $id;
 
-        $memberModel = new ServerMemberModel();
-        if (!$memberModel->isMember($serverId, $userId)) {
-            jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
-        }
+        $server = (new ServerModel())->findById($serverId);
+        if (!$server) jsonResponse(false, [], ErrorCodes::SERVER_NOT_FOUND, 404);
 
         return [
             'species'    => (new SpeciesModel())->findForServer($serverId),
@@ -257,40 +163,17 @@ class Server extends AbstractEndpoint {
         ];
     }
 
-    #[Endpoint('post', '/server/join', 'Join server by invite code')]
-    public function joinServer(): array {
-        $userId = $this->requireAuth();
-        $body   = $this->body();
+    // ── Personnages du serveur ────────────────────────────────────────────────
 
-        $inviteCode = trim(strtoupper((string) ($body['invite_code'] ?? '')));
-        if ($inviteCode === '') {
-            jsonResponse(false, [], ErrorCodes::MISSING_PARAMETERS, 400);
-        }
+    #[Endpoint('get', '/server/{id}/characters', 'Get server characters')]
+    public function getServerCharacters(string $id): array {
+        $this->requireAuth();
+        $serverId = (int) $id;
 
-        $serverModel = new ServerModel();
-        $server      = $serverModel->findByInviteCode($inviteCode);
+        $server = (new ServerModel())->findById($serverId);
+        if (!$server) jsonResponse(false, [], ErrorCodes::SERVER_NOT_FOUND, 404);
 
-        if (!$server) {
-            jsonResponse(false, [], ErrorCodes::SERVER_INVITE_INVALID, 404);
-        }
-
-        $memberModel = new ServerMemberModel();
-        if ($memberModel->isMember($server['id'], $userId)) {
-            return ['message' => 'Already a member.', 'server_id' => $server['id']];
-        }
-
-        $count = $memberModel->countMembers($server['id']);
-        if ($count >= $server['max_players']) {
-            jsonResponse(false, [], ErrorCodes::SERVER_FORBIDDEN, 403);
-        }
-
-        $memberModel->add($server['id'], $userId, 'player');
-
-        return [
-            'server_id'  => $server['id'],
-            'name'       => $server['name'],
-            'role'       => 'player',
-        ];
+        return (new CharacterModel())->findByServer($serverId);
     }
 
 }
