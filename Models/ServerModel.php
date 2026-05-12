@@ -19,27 +19,82 @@ class ServerModel extends Model {
         return $this->fetchOne();
     }
 
-    public function findAll(): array {
+    public function findByUser(int $userId): array {
         $this->query(
-            'SELECT s.*, ts.title AS theme_title
-             FROM `server` s
+            'SELECT s.*, sm.role, sm.joined_at, ts.title AS theme_title
+             FROM `server_member` sm
+             JOIN `server` s ON s.id = sm.server_id
              LEFT JOIN `tag_style` ts ON ts.id = s.server_theme_id
-             ORDER BY s.id'
+             WHERE sm.user_id = :user_id
+             ORDER BY sm.joined_at DESC',
+            ['user_id' => $userId]
         );
         return $this->fetchAll();
     }
 
-    public function create(string $name, string $description, int $themeId): int {
+    public function findPublic(): array {
         $this->query(
-            'INSERT INTO `server` (`server_name`, `server_description`, `server_theme_id`)
-             VALUES (:name, :description, :theme)',
-            ['name' => $name, 'description' => $description, 'theme' => $themeId]
+            'SELECT s.*, ts.title AS theme_title,
+                    (SELECT COUNT(*) FROM `server_member` WHERE server_id = s.id) AS member_count
+             FROM `server` s
+             LEFT JOIN `tag_style` ts ON ts.id = s.server_theme_id
+             WHERE s.visibility = \'public\'
+             ORDER BY s.created_at DESC'
+        );
+        return $this->fetchAll();
+    }
+
+    public function findByInviteCode(string $code): ?array {
+        $this->query(
+            'SELECT * FROM `server` WHERE `invite_code` = :code LIMIT 1',
+            ['code' => $code]
+        );
+        return $this->fetchOne();
+    }
+
+    public function inviteCodeExists(string $code): bool {
+        $this->query(
+            'SELECT id FROM `server` WHERE `invite_code` = :code LIMIT 1',
+            ['code' => $code]
+        );
+        return $this->fetchOne() !== null;
+    }
+
+    public function create(
+        int    $createdBy,
+        string $name,
+        string $description,
+        string $visibility,
+        int    $maxPlayers,
+        ?string $inviteCode,
+        bool   $ageRestricted,
+        ?string $genre,
+        int    $themeId = 1
+    ): int {
+        $this->query(
+            'INSERT INTO `server`
+                (`created_by`, `name`, `description`, `visibility`, `max_players`,
+                 `invite_code`, `age_restricted`, `genre`, `server_theme_id`, `created_at`)
+             VALUES
+                (:created_by, :name, :description, :visibility, :max_players,
+                 :invite_code, :age_restricted, :genre, :theme_id, NOW())',
+            [
+                'created_by'    => $createdBy,
+                'name'          => $name,
+                'description'   => $description,
+                'visibility'    => $visibility,
+                'max_players'   => $maxPlayers,
+                'invite_code'   => $inviteCode,
+                'age_restricted'=> (int) $ageRestricted,
+                'genre'         => $genre,
+                'theme_id'      => $themeId,
+            ]
         );
         return $this->lastId();
     }
 
     public function update(int $id, array $data): bool {
-        $allowed = ['server_name', 'server_description', 'server_theme_id'];
+        $allowed = ['name', 'description', 'visibility', 'max_players', 'invite_code', 'age_restricted', 'genre', 'server_theme_id'];
         $fields  = array_intersect_key($data, array_flip($allowed));
         if (empty($fields)) return false;
 
@@ -51,6 +106,14 @@ class ServerModel extends Model {
 
     public function delete(int $id): bool {
         return $this->query('DELETE FROM `server` WHERE `id` = :id', ['id' => $id]);
+    }
+
+    public function isOwner(int $serverId, int $userId): bool {
+        $this->query(
+            'SELECT id FROM `server` WHERE `id` = :id AND `created_by` = :user_id LIMIT 1',
+            ['id' => $serverId, 'user_id' => $userId]
+        );
+        return $this->fetchOne() !== null;
     }
 
 }

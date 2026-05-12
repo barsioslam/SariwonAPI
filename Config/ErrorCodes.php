@@ -29,6 +29,12 @@ class ErrorCodes {
     const CHAR_NOT_FOUND = 3001;
     const CHAR_FORBIDDEN = 3002;
 
+    // SERVER CODES
+    const SERVER_NOT_FOUND      = 4001;
+    const SERVER_FORBIDDEN      = 4002;
+    const SERVER_INVITE_INVALID = 4003;
+    const SERVER_INVITE_TAKEN   = 4004;
+
     public static function getMessage(int $code): string {
         switch ($code) {
             case self::INVALID_REQUEST:
@@ -63,6 +69,14 @@ class ErrorCodes {
                 return 'Character not found.';
             case self::CHAR_FORBIDDEN:
                 return 'You do not own this character.';
+            case self::SERVER_NOT_FOUND:
+                return 'Server not found.';
+            case self::SERVER_FORBIDDEN:
+                return 'You do not have access to this server.';
+            case self::SERVER_INVITE_INVALID:
+                return 'Invalid invite code.';
+            case self::SERVER_INVITE_TAKEN:
+                return 'This invite code is already in use.';
             default:
                 return 'Unknown error.';
         }

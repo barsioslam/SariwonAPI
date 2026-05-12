@@ -1,4 +1,37 @@
 <?php
+ini_set('display_errors', '1');
+error_reporting(E_ALL);
+
+// CORS — utilisé seulement pour les accès directs à api.sariwon.com
+// (le frontend passe par le proxy Apache → pas de CORS nécessaire)
+$allowedOrigins = [
+    'http://localhost:5173',      // dev Vite
+    'https://rpg.taderlafe.com',  // prod (remplacer par sariwon.com quand dispo)
+];
+
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+if (in_array($origin, $allowedOrigins, true)) {
+    header("Access-Control-Allow-Origin: $origin");
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization');
+}
+
+// Répondre immédiatement aux preflight OPTIONS
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
+
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'domain' => '.taderlafe.com',
+    'secure' => true,
+    'httponly' => true,
+    'samesite' => 'None',
+]);
 
 session_start();
 
@@ -18,7 +51,8 @@ use SariwonAPI\Config\ErrorCodes;
 
 $config = Configuration::getInstance();
 
-$url = explode('/', $_GET['url']);
+$requestUrl = trim($_GET['url'] ?? '', '/');
+$url = explode('/', $requestUrl);
 
 if ($config->get('core', 'debug/show_err') == true) {
     ini_set('display_errors', '1');
@@ -153,6 +187,13 @@ try {
 
 } catch (Throwable $e) {
 
-    jsonResponse(false, [], ErrorCodes::INTERNAL_SERVER_ERROR, 500);
+    jsonResponse(false, [
+        'message' => $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+        'trace' => $e->getTraceAsString(),
+    ], null, 500);
+
+    // jsonResponse(false, [], ErrorCodes::INTERNAL_SERVER_ERROR, 500);
     
 }

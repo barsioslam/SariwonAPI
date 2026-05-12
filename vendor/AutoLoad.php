@@ -3,7 +3,7 @@
 $namespaces = [
 
     "SariwonAPI\\Config\\"        => BASE_DIR . "Config/",    
-    "SariwonAPI\\Database\\"      => VENDOR_DIR . "Database/",
+    "SariwonAPI\\Database\\"      => VENDOR_DIR . "/Database/",
     "SariwonAPI\\Models\\"        => MODELS_DIR,
     "SariwonAPI\\Endpoints\\"     => ENDPOINTS_DIR,
 

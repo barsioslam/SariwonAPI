@@ -3,6 +3,7 @@
 namespace SariwonAPI\Endpoints;
 
 use SariwonAPI\Models\UserModel;
+use SariwonAPI\Config\ErrorCodes;
 
 class Me extends AbstractEndpoint {
 
@@ -13,7 +14,7 @@ class Me extends AbstractEndpoint {
         $user   = $model->findById($userId);
 
         if (!$user) {
-            jsonResponse(false, [], \ErrorCodes::NOT_FOUND, 404);
+            jsonResponse(false, [], ErrorCodes::NOT_FOUND, 404);
         }
 
         return $user;
@@ -30,7 +31,7 @@ class Me extends AbstractEndpoint {
         $user = $model->findById($userId);
 
         if (!$user) {
-            jsonResponse(false, [], \ErrorCodes::NOT_FOUND, 404);
+            jsonResponse(false, [], ErrorCodes::NOT_FOUND, 404);
         }
 
         return $user;

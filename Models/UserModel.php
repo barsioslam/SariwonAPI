@@ -10,7 +10,7 @@ class UserModel extends Model {
 
     public function findById(int $id): ?array {
         $this->query(
-            'SELECT `id`, `username`, `uniquename`, `biography`, `email`,
+            'SELECT `id`, `username`, `biography`, `email`,
                     `recovery_email`, `phone_e164`, `country_code`, `tag_id`
              FROM `user` WHERE `id` = :id LIMIT 1',
             ['id' => $id]
@@ -20,7 +20,7 @@ class UserModel extends Model {
 
     public function findByEmail(string $email): ?array {
         $this->query(
-            'SELECT `id`, `username`, `uniquename`, `email`, `password`
+            'SELECT `id`, `username`, `email`, `password`
              FROM `user` WHERE `email` = :email LIMIT 1',
             ['email' => $email]
         );
@@ -35,23 +35,14 @@ class UserModel extends Model {
         return $this->rowCount() > 0;
     }
 
-    public function uniquenameExists(string $uniquename): bool {
+    public function create(string $username, string $email, string $passwordHash): int {
         $this->query(
-            'SELECT `id` FROM `user` WHERE `uniquename` = :u LIMIT 1',
-            ['u' => $uniquename]
-        );
-        return $this->rowCount() > 0;
-    }
-
-    public function create(string $username, string $uniquename, string $email, string $passwordHash): int {
-        $this->query(
-            'INSERT INTO `user` (`username`, `uniquename`, `email`, `password`)
-             VALUES (:username, :uniquename, :email, :password)',
+            'INSERT INTO `user` (`username`, `email`, `password`)
+             VALUES (:username, :email, :password)',
             [
-                'username'   => $username,
-                'uniquename' => $uniquename,
-                'email'      => $email,
-                'password'   => $passwordHash,
+                'username' => $username,
+                'email'    => $email,
+                'password' => $passwordHash,
             ]
         );
         return $this->lastId();
@@ -71,18 +62,6 @@ class UserModel extends Model {
 
     public function delete(int $id): bool {
         return $this->query('DELETE FROM `user` WHERE `id` = :id', ['id' => $id]);
-    }
-
-    public function generateUniquename(string $username): string {
-        $base      = strtolower(preg_replace('/[^a-z0-9_]/i', '', str_replace(' ', '_', $username)) ?? '');
-        $base      = $base !== '' ? $base : 'user';
-        $candidate = $base;
-
-        while ($this->uniquenameExists($candidate)) {
-            $candidate = $base . '_' . rand(1000, 9999);
-        }
-
-        return $candidate;
     }
 
 }

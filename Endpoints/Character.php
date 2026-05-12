@@ -3,6 +3,7 @@
 namespace SariwonAPI\Endpoints;
 
 use SariwonAPI\Models\CharacterModel;
+use SariwonAPI\Config\ErrorCodes;
 
 class Character extends AbstractEndpoint {
 
@@ -19,7 +20,7 @@ class Character extends AbstractEndpoint {
         $character = $model->findById((int) $id);
 
         if (!$character) {
-            jsonResponse(false, [], \ErrorCodes::CHAR_NOT_FOUND, 404);
+            jsonResponse(false, [], ErrorCodes::CHAR_NOT_FOUND, 404);
         }
 
         return $character;
@@ -31,7 +32,7 @@ class Character extends AbstractEndpoint {
         $body   = $this->body();
 
         if (empty($body['name']) || empty($body['server_id']) || empty($body['species_id'])) {
-            jsonResponse(false, [], \ErrorCodes::MISSING_PARAMETERS, 400);
+            jsonResponse(false, [], ErrorCodes::MISSING_PARAMETERS, 400);
         }
 
         $model  = new CharacterModel();
@@ -40,7 +41,7 @@ class Character extends AbstractEndpoint {
         $character = $model->findById($charId);
 
         if (!$character) {
-            jsonResponse(false, [], \ErrorCodes::INTERNAL_SERVER_ERROR, 500);
+            jsonResponse(false, [], ErrorCodes::INTERNAL_SERVER_ERROR, 500);
         }
 
         return $character;
@@ -53,7 +54,7 @@ class Character extends AbstractEndpoint {
         $model  = new CharacterModel();
 
         if (!$model->belongsToUser($charId, $userId)) {
-            jsonResponse(false, [], \ErrorCodes::CHAR_FORBIDDEN, 403);
+            jsonResponse(false, [], ErrorCodes::CHAR_FORBIDDEN, 403);
         }
 
         $body = $this->body();
@@ -62,7 +63,7 @@ class Character extends AbstractEndpoint {
         $character = $model->findById($charId);
 
         if (!$character) {
-            jsonResponse(false, [], \ErrorCodes::CHAR_NOT_FOUND, 404);
+            jsonResponse(false, [], ErrorCodes::CHAR_NOT_FOUND, 404);
         }
 
         return $character;
@@ -75,7 +76,7 @@ class Character extends AbstractEndpoint {
         $model  = new CharacterModel();
 
         if (!$model->belongsToUser($charId, $userId)) {
-            jsonResponse(false, [], \ErrorCodes::CHAR_FORBIDDEN, 403);
+            jsonResponse(false, [], ErrorCodes::CHAR_FORBIDDEN, 403);
         }
 
         $model->delete($charId);
