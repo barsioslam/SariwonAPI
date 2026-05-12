@@ -37,4 +37,8 @@ abstract class Model {
         return $this->db()->rowCount();
     }
 
+    public function getLastError(): ?string {
+        return $this->db()->getLastError();
+    }
+
 }

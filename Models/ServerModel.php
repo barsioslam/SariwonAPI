@@ -69,7 +69,7 @@ class ServerModel extends Model {
         ?string $inviteCode,
         bool   $ageRestricted,
         ?string $genre,
-        int    $themeId = 1
+        ?int   $themeId = null
     ): int {
         $this->query(
             'INSERT INTO `server`
@@ -77,7 +77,7 @@ class ServerModel extends Model {
                  `invite_code`, `age_restricted`, `genre`, `server_theme_id`, `created_at`)
              VALUES
                 (:created_by, :name, :description, :visibility, :max_players,
-                 :invite_code, :age_restricted, :genre, :theme_id, NOW())',
+                 :invite_code, :age_restricted, :genre, :theme_id, :created_at)',
             [
                 'created_by'    => $createdBy,
                 'name'          => $name,
@@ -88,6 +88,7 @@ class ServerModel extends Model {
                 'age_restricted'=> (int) $ageRestricted,
                 'genre'         => $genre,
                 'theme_id'      => $themeId,
+                'created_at'    => time(),
             ]
         );
         return $this->lastId();

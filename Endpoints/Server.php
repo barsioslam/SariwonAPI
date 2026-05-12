@@ -49,7 +49,7 @@ class Server extends AbstractEndpoint {
 
         $name          = trim((string) ($body['name']          ?? ''));
         $description   = trim((string) ($body['description']   ?? ''));
-        $visibility    = (int)          ($body['visibility']   ?? 0);
+        $visibility    = trim((string) ($body['visibility']    ?? 'public'));
         $maxPlayers    = (int)          ($body['maxPlayers']   ?? 8);
         $inviteCode    = trim((string) ($body['inviteCode']    ?? '')) ?: null;
         $ageRestricted = (bool)        ($body['ageRestricted'] ?? false);
@@ -96,6 +96,12 @@ class Server extends AbstractEndpoint {
             $ageRestricted,
             $genre
         );
+
+        if (!$serverId) {
+            jsonResponse(false, [
+                'message' => $serverModel->getLastError() ?? 'Insert failed',
+            ], ErrorCodes::INTERNAL_SERVER_ERROR, 500);
+        }
 
         // Ajouter le créateur comme membre GM
         $memberModel = new ServerMemberModel();

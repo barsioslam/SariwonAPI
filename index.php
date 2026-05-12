@@ -1,4 +1,5 @@
 <?php
+ob_start();
 ini_set('display_errors', '1');
 error_reporting(E_ALL);
 
@@ -65,12 +66,14 @@ if ($config->get('core', 'debug/show_err') == true) {
 }
 
 function jsonResponse(bool $success, mixed $data, mixed $err = null, int $status = 200): never {
+    $captured = ob_get_clean();
     header('Content-Type: application/json; charset=utf-8');
     http_response_code($status);
     if (!$success) {
         $data = [
-            'code' => $err ?? ErrorCodes::UNKNOWN_ERROR,
+            'code'    => $err ?? ErrorCodes::UNKNOWN_ERROR,
             'message' => ErrorCodes::getMessage($err ?? ErrorCodes::UNKNOWN_ERROR),
+            '_debug'  => ini_get('display_errors') ? ($captured ?: null) : null,
         ];
     }
     echo json_encode(['success' => $success, 'status' => $status, 'data' => $data], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -123,8 +126,8 @@ if ($config->get('core', 'debug/show_ep') == true && $url[0] == "__debug__") {
     die();
 
 }
-
-try {
+/*
+try {*/
     $requestMethod = strtolower($_SERVER['REQUEST_METHOD'] ?? 'get');
     $requestUrl = trim($_GET['url'] ?? '', '/');
 
@@ -184,7 +187,7 @@ try {
     }
 
     jsonResponse(false, [], ErrorCodes::ENDPOINT_NOT_FOUND, 404);
-
+/*
 } catch (Throwable $e) {
 
     jsonResponse(false, [
@@ -196,4 +199,4 @@ try {
 
     // jsonResponse(false, [], ErrorCodes::INTERNAL_SERVER_ERROR, 500);
     
-}
+}*/

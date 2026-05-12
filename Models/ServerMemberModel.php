@@ -19,8 +19,8 @@ class ServerMemberModel extends Model {
     public function add(int $serverId, int $userId, string $role = 'player'): int {
         $this->query(
             'INSERT INTO `server_member` (`server_id`, `user_id`, `role`, `joined_at`)
-             VALUES (:server_id, :user_id, :role, NOW())',
-            ['server_id' => $serverId, 'user_id' => $userId, 'role' => $role]
+             VALUES (:server_id, :user_id, :role, :joined_at)',
+            ['server_id' => $serverId, 'user_id' => $userId, 'role' => $role, 'joined_at' => time()]
         );
         return $this->lastId();
     }
