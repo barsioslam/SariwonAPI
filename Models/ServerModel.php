@@ -20,17 +20,31 @@ class ServerModel extends Model {
         return $this->fetchOne() ?: null;
     }
 
-    /** Serveurs mis en favoris par l'utilisateur */
-    public function findFavorited(int $userId): array {
+    /**
+     * Remonte tous les serveurs pertinents pour l'utilisateur :
+     * ceux qu'il a créés, mis en favoris, ou dans lesquels il est dans une partie.
+     */
+    public function findForUser(int $userId): array {
         $this->query(
-            'SELECT s.*, sf.saved_at,
+            'SELECT s.*,
+                    sf.saved_at,
                     (SELECT COUNT(*) FROM `party` p WHERE p.server_id = s.id) AS party_count,
-                    1 AS is_favorited
-             FROM `server_favorite` sf
-             JOIN `server` s ON s.id = sf.server_id
-             WHERE sf.user_id = :uid
-             ORDER BY sf.saved_at DESC',
-            ['uid' => $userId]
+                    IF(s.created_by = :uid,  1, 0) AS is_owner,
+                    IF(sf.id IS NOT NULL,     1, 0) AS is_favorited,
+                    IF(pm.server_id IS NOT NULL, 1, 0) AS is_party_member
+             FROM `server` s
+             LEFT JOIN `server_favorite` sf ON sf.server_id = s.id AND sf.user_id = :uid2
+             LEFT JOIN (
+                 SELECT DISTINCT p.server_id
+                 FROM `party_member` pm2
+                 JOIN `party` p ON p.id = pm2.party_id
+                 WHERE pm2.user_id = :uid3
+             ) pm ON pm.server_id = s.id
+             WHERE s.created_by = :uid4
+                OR sf.id IS NOT NULL
+                OR pm.server_id IS NOT NULL
+             ORDER BY COALESCE(sf.saved_at, s.created_at) DESC',
+            ['uid' => $userId, 'uid2' => $userId, 'uid3' => $userId, 'uid4' => $userId]
         );
         return $this->fetchAll();
     }

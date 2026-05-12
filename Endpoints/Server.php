@@ -15,10 +15,10 @@ class Server extends AbstractEndpoint {
 
     // ── Serveurs favoris de l'utilisateur ────────────────────────────────────
 
-    #[Endpoint('get', '/servers', 'Get favorited servers')]
-    public function getFavoritedServers(): array {
+    #[Endpoint('get', '/servers', 'Get user servers (owned, favorited, party member)')]
+    public function getMyServers(): array {
         $userId = $this->requireAuth();
-        return (new ServerModel())->findFavorited($userId);
+        return (new ServerModel())->findForUser($userId);
     }
 
     // ── Recherche / browse public ─────────────────────────────────────────────
